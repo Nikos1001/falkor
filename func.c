@@ -76,7 +76,9 @@ static void topologicalSortDFS(fkr_block* blk, bool* vis, fkr_block** stack, int
             size_t offset = fkr_valPtrOffsets[val->type][i];
             if(offset) {
                 fkr_val* nextVal = *(fkr_val**)((char*)val + offset);
-                topologicalSortDFS(nextVal->block, vis, stack, stackIdx);
+                if(nextVal != NULL) {
+                    topologicalSortDFS(nextVal->block, vis, stack, stackIdx);
+                }
             }
         }
     }
@@ -109,5 +111,8 @@ void fkr_blockTopologicalSort(fkr_func* fn) {
     resStack[blocks - 1]->nextBlock = NULL;
     fn->firstBlock = resStack[0];
     fn->blocks = resStack[0];
+
+    // Forces symbol reassignment, which is used to find value reference cycles later on
+    fn->hasSymbols = false;
 
 }

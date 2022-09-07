@@ -8,6 +8,44 @@ static void verifyVal(fkr_error* err, fkr_func* func, fkr_block* block, fkr_val*
 
     bool causedError = false;
 
+    for(int i = 0; i < FKR_MAX_VAL_PTRS; i++) {
+        size_t offset = fkr_valPtrOffsets[val->type][i];
+        if(offset) {
+            fkr_val* nextVal = *(fkr_val**)((char*)val + offset);
+            if(nextVal != NULL) {
+                if(nextVal->block->sym < block->sym) {
+                    err->error = true;
+                    fkr_writeToStr(&err->msg, "Value %%%d is created in a future block!\n", nextVal->sym);
+                    fkr_writeToStr(&err->msg, "Make sure blocks '%s' and '%s' do not contain a cyclic reference.\n", block->name.str, nextVal->block->name.str);
+                    fkr_writeFuncDecl(&err->msg, func);
+                    fkr_writeToStr(&err->msg, "\n");
+                    if(block != func->firstBlock)
+                        fkr_writeToStr(&err->msg, "\t...\n");
+                    fkr_writeBlock(&err->msg, block, val);
+                    fkr_writeBlock(&err->msg, nextVal->block, nextVal);
+                }
+
+                if(nextVal->block->fn != block->fn) {
+                    err->error = true;
+                    fkr_writeToStr(&err->msg, "Value %%%d is in a different function!\n", nextVal->sym);
+
+                    fkr_writeFuncDecl(&err->msg, func);
+                    fkr_writeToStr(&err->msg, "\n");                    
+                    if(block != func->firstBlock)
+                        fkr_writeToStr(&err->msg, "\t...\n");
+                    fkr_writeBlock(&err->msg, block, val);
+
+                    fkr_writeToStr(&err->msg, "\n"); 
+                    fkr_writeFuncDecl(&err->msg, nextVal->block->fn);
+                    fkr_writeToStr(&err->msg, "\n");                    
+                    if(nextVal->block != nextVal->block->fn->firstBlock)
+                        fkr_writeToStr(&err->msg, "\t...\n");
+                    fkr_writeBlock(&err->msg, nextVal->block, nextVal);
+                }
+            }
+        }
+    }
+
     switch(val->type) {
         case FKR_VAL_CONST:
             break;
