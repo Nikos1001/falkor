@@ -41,6 +41,8 @@ void fkr_set(fkr_builder* b, fkr_valRef ptr, fkr_valRef val);
 void fkr_jump(fkr_builder* b, fkr_blockRef block);
 void fkr_branch(fkr_builder* b, fkr_valRef cond, fkr_blockRef thenBlock, fkr_blockRef elseBlock);
 
+fkr_valRef fkr_arg(fkr_builder* b, int idx);
 void fkr_return(fkr_builder* b, fkr_valRef val);
+fkr_valRef fkr_call(fkr_builder* b, fkr_valRef func, int argc, fkr_valRef* args);
 
 #endif

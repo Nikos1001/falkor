@@ -26,6 +26,7 @@ void fkr_freeContext(fkr_contextRef ctx) {
     fkr_type* currType = ctx->types;
     while(currType != NULL) {
         fkr_type* nextType = currType->nextType;
+        fkr_freeType(currType);
         free(currType);
         currType = nextType;
     }
@@ -60,5 +61,35 @@ fkr_typeRef fkr_ptrType(fkr_contextRef ctx, fkr_typeRef elemType) {
     }
     fkr_typePtr* res = (fkr_typePtr*)allocType(ctx, FKR_TYPE_PTR, sizeof(fkr_typePtr));
     res->elemType = elemType;
+    return (fkr_type*)res;
+}
+
+fkr_typeRef fkr_funcType(fkr_contextRef ctx, fkr_typeRef retType, int paramCnt, fkr_typeRef* params) {
+    for(fkr_type* t = ctx->types; t != NULL; t = t->nextType) {
+        if(fkr_getTypeType(t) == FKR_TYPE_FUNC) {
+            fkr_typeFunc* func = (fkr_typeFunc*)t;
+
+            if(func->retType != retType)
+                continue;
+            if(func->paramCnt != paramCnt)
+                continue;
+
+            bool paramsSame = true;
+            for(int i = 0; i < paramCnt; i++) {
+                if(func->params[i] != params[i])
+                    paramsSame = false;
+            } 
+            if(!paramsSame)
+                continue;
+
+            return t;
+        }
+    }
+    fkr_typeFunc* res = (fkr_typeFunc*)allocType(ctx, FKR_TYPE_FUNC, sizeof(fkr_typeFunc));
+    res->retType = retType;
+    res->paramCnt = paramCnt;
+    res->params = malloc(paramCnt * sizeof(fkr_type*));
+    for(int i = 0; i < paramCnt; i++)
+        res->params[i] = params[i];
     return (fkr_type*)res;
 }

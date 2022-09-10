@@ -33,9 +33,14 @@ static void compileType(fkr_str* src, fkr_type* t) {
 }
 
 static void compileValUse(fkr_str* src, fkr_val* v) {
-    char valName[32];
-    symToStr(valName, v->sym);
-    fkr_writeToStr(src, "%s", valName);
+    if(v->type == FKR_VAL_FUNC) {
+        fkr_func* f = (fkr_func*)v;
+        fkr_writeToStr(src, "%s", f->name.str);
+    } else {
+        char valName[32];
+        symToStr(valName, v->sym);
+        fkr_writeToStr(src, "%s", valName);
+    }
 }
 
 static void compileVal(fkr_str* src, fkr_val* val) {
@@ -125,12 +130,29 @@ static void compileVal(fkr_str* src, fkr_val* val) {
             fkr_writeToStr(src, ") { goto %s_%s; } else { goto %s_%s; }", branch->thenBranch->name.str, thenBuf, branch->elseBranch->name.str, elseBuf);
             break;
         }
+        case FKR_VAL_ARG: {
+            fkr_valArg* arg = (fkr_valArg*)val;
+            fkr_writeToStr(src, "a_%d", arg->idx);
+            break;
+        }
         case FKR_VAL_RETURN: {
             fkr_valReturn* ret = (fkr_valReturn*)val;
             fkr_writeToStr(src, "return ");
             if(ret->retVal != NULL) {
                 compileValUse(src, ret->retVal);
             }
+            break;
+        }
+        case FKR_VAL_CALL: {
+            fkr_valCall* call = (fkr_valCall*)val;
+            compileValUse(src, call->func);
+            fkr_writeToStr(src, "(");
+            for(int i = 0; i < call->argc; i++) {
+                compileValUse(src, call->args[i]);
+                if(i != call->argc - 1)
+                    fkr_writeToStr(src, ", "); 
+            }
+            fkr_writeToStr(src, ")");
             break;
         }
     }
@@ -154,6 +176,19 @@ static void compileFunc(fkr_str* src, fkr_func* fn) {
     }
 }
 
+static void writeCFuncDecl(fkr_str* s, fkr_func* fn) {
+    fkr_typeFunc* fnType = (fkr_typeFunc*)fn->v.valType;
+    compileType(s, fnType->retType);
+    fkr_writeToStr(s, " %s(", fn->name.str);
+    for(int i = 0; i < fnType->paramCnt; i++) {
+        compileType(s, fnType->params[i]);
+        fkr_writeToStr(s, " a_%d", i);
+        if(i != fnType->paramCnt - 1)
+            fkr_writeToStr(s, ", ");
+    }
+    fkr_writeToStr(s, ")");
+}
+
 void fkr_compilePkg(fkr_pkgRef pkg) {
     char filePath[pkg->name.len + 3];
     memcpy(filePath, pkg->name.str, pkg->name.len);
@@ -169,11 +204,12 @@ void fkr_compilePkg(fkr_pkgRef pkg) {
     fkr_str header = fkr_makeStr("");
 
     for(fkr_func* fn = pkg->funcs; fn != NULL; fn = fn->nextFunc) {
-        compileType(&header, fn->retType);
-        fkr_writeToStr(&header, " %s();\n", fn->name.str);
+        fkr_typeFunc* fnType = (fkr_typeFunc*)fn->v.valType;
+        writeCFuncDecl(&header, fn);
+        fkr_writeToStr(&header, ";\n");
 
-        compileType(&source, fn->retType);
-        fkr_writeToStr(&source, " %s() {\n", fn->name.str);
+        writeCFuncDecl(&source, fn);
+        fkr_writeToStr(&source, " {\n", fn->name.str);
         compileFunc(&source, fn);
         fkr_writeToStr(&source, "}\n");
     }

@@ -1,5 +1,6 @@
 
 #include "pkg.h"
+#include "context.h"
 #include <stdlib.h>
 
 void fkr_initPkg(fkr_pkg* pkg, fkr_str name, struct fkr_context* ctx) {
@@ -23,5 +24,6 @@ fkr_funcRef fkr_addFunction(fkr_pkgRef pkg, const char* name, fkr_typeRef retTyp
     fkr_initFunc(func, fkr_makeStr(name), retType, paramCnt, paramTypes, pkg->ctx);
     func->nextFunc = pkg->funcs;
     pkg->funcs = func;
+    func->v.valType = fkr_funcType(pkg->ctx, retType, paramCnt, paramTypes);
     return func;
 }

@@ -40,6 +40,13 @@ typedef struct {
     fkr_type* elemType;
 } fkr_typePtr;
 
+typedef struct {
+    fkr_type t;
+    fkr_type* retType;
+    int paramCnt;
+    fkr_type** params;
+} fkr_typeFunc;
+
 fkr_typeRef fkr_voidType();
 fkr_typeRef fkr_i8Type();
 fkr_typeRef fkr_i16Type();
@@ -57,5 +64,7 @@ bool fkr_isPrimitiveType(fkr_typeRef type);
 bool fkr_isIntegralType(fkr_typeRef type);
 bool fkr_isNumericType(fkr_typeRef type);
 bool fkr_isPtrType(fkr_typeRef type);
+
+void fkr_freeType(fkr_type* t);
 
 #endif

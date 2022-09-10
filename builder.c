@@ -222,6 +222,17 @@ void fkr_branch(fkr_builder* b, fkr_valRef cond, fkr_blockRef thenBlock, fkr_blo
 
 
 
+fkr_valRef fkr_arg(fkr_builder* b, int idx) {
+    fkr_valArg* arg = (fkr_valArg*)appendVal(b, sizeof(fkr_valArg), FKR_VAL_ARG);
+    arg->idx = idx;
+    fkr_typeFunc* fnType = (fkr_typeFunc*)b->block->fn->v.valType;
+    if(idx >= 0 && idx < fnType->paramCnt)
+        arg->v.valType = fnType->params[idx];
+    else
+        arg->v.valType = NULL;
+    return (fkr_val*)arg; 
+}
+
 void fkr_return(fkr_builder* b, fkr_valRef val) {
     fkr_valReturn* ret = (fkr_valReturn*)appendVal(b, sizeof(fkr_valReturn), FKR_VAL_RETURN);
     ret->v.valType = fkr_voidType();
@@ -231,4 +242,22 @@ void fkr_return(fkr_builder* b, fkr_valRef val) {
     } else {
         ret->retType = val->valType;
     }
+}
+
+fkr_valRef fkr_call(fkr_builder* b, fkr_valRef func, int argc, fkr_valRef* args) {
+    fkr_valCall* call = (fkr_valCall*)appendVal(b, sizeof(fkr_valCall), FKR_VAL_CALL);
+    call->func = func;
+    call->argc = argc;
+    call->args = malloc(argc * sizeof(fkr_val*));
+    for(int i = 0; i < argc; i++)
+        call->args[i] = args[i];
+
+    if(fkr_getTypeType(func->valType) == FKR_TYPE_FUNC) {
+        fkr_typeFunc* fType = (fkr_typeFunc*)func->valType;
+        call->v.valType = fType->retType;
+    } else {
+        call->v.valType = NULL;
+    }
+
+    return (fkr_val*)call;
 }

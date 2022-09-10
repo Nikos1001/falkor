@@ -5,10 +5,9 @@
 #include <string.h>
 
 void fkr_initFunc(fkr_func* fn, fkr_str name, fkr_type* retType, int paramCnt, fkr_type** paramTypes, fkr_context* ctx) {
+    fn->v.type = FKR_VAL_FUNC;
+
     fn->name = name;
-    fn->retType = retType;
-    fn->paramCnt = paramCnt;
-    fn->paramTypes = paramTypes;
 
     fn->blocks = NULL;
     fn->firstBlock = fkr_addBlock(fn, "entry");
@@ -27,7 +26,6 @@ void fkr_freeFunc(fkr_func* fn) {
         free(curr);
         curr = next;
     }
-    free(fn->paramTypes);
 }
 
 fkr_blockRef fkr_addBlock(fkr_funcRef fn, const char* name) {
@@ -76,10 +74,16 @@ static void topologicalSortDFS(fkr_block* blk, bool* vis, fkr_block** stack, int
             size_t offset = fkr_valPtrOffsets[val->type][i];
             if(offset) {
                 fkr_val* nextVal = *(fkr_val**)((char*)val + offset);
-                if(nextVal != NULL) {
+                if(nextVal != NULL && nextVal->type != FKR_VAL_FUNC) {
                     topologicalSortDFS(nextVal->block, vis, stack, stackIdx);
                 }
             }
+        }
+        if(val->type == FKR_VAL_CALL) {
+            fkr_valCall* call = (fkr_valCall*)val;
+            for(int i = 0; i < call->argc; i++)
+                if(call->args[i] != NULL && call->args[i]->type != FKR_VAL_FUNC)
+                    topologicalSortDFS(call->args[i]->block, vis, stack, stackIdx);
         }
     }
 

@@ -4,6 +4,40 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+static void verifyValRef(fkr_error* err, fkr_func* func, fkr_block* block, fkr_val* val, fkr_val* nextVal) {
+    if(nextVal != NULL && nextVal->type != FKR_VAL_FUNC) {
+        if(nextVal->block->sym < block->sym) {
+            err->error = true;
+            fkr_writeToStr(&err->msg, "Value %%%d is created in a future block!\n", nextVal->sym);
+            fkr_writeToStr(&err->msg, "Make sure blocks '%s' and '%s' do not contain a cyclic reference.\n", block->name.str, nextVal->block->name.str);
+            fkr_writeFuncDecl(&err->msg, func);
+            fkr_writeToStr(&err->msg, "\n");
+            if(block != func->firstBlock)
+                fkr_writeToStr(&err->msg, "\t...\n");
+            fkr_writeBlock(&err->msg, block, val);
+            fkr_writeBlock(&err->msg, nextVal->block, nextVal);
+        }
+
+        if(nextVal->block->fn != block->fn) {
+            err->error = true;
+            fkr_writeToStr(&err->msg, "Value %%%d is in a different function!\n", nextVal->sym);
+
+            fkr_writeFuncDecl(&err->msg, func);
+            fkr_writeToStr(&err->msg, "\n");                    
+            if(block != func->firstBlock)
+                fkr_writeToStr(&err->msg, "\t...\n");
+            fkr_writeBlock(&err->msg, block, val);
+
+            fkr_writeToStr(&err->msg, "\n"); 
+            fkr_writeFuncDecl(&err->msg, nextVal->block->fn);
+            fkr_writeToStr(&err->msg, "\n");                    
+            if(nextVal->block != nextVal->block->fn->firstBlock)
+                fkr_writeToStr(&err->msg, "\t...\n");
+            fkr_writeBlock(&err->msg, nextVal->block, nextVal);
+        }
+    }
+}
+
 static void verifyVal(fkr_error* err, fkr_func* func, fkr_block* block, fkr_val* val) {
 
     bool causedError = false;
@@ -12,38 +46,13 @@ static void verifyVal(fkr_error* err, fkr_func* func, fkr_block* block, fkr_val*
         size_t offset = fkr_valPtrOffsets[val->type][i];
         if(offset) {
             fkr_val* nextVal = *(fkr_val**)((char*)val + offset);
-            if(nextVal != NULL) {
-                if(nextVal->block->sym < block->sym) {
-                    err->error = true;
-                    fkr_writeToStr(&err->msg, "Value %%%d is created in a future block!\n", nextVal->sym);
-                    fkr_writeToStr(&err->msg, "Make sure blocks '%s' and '%s' do not contain a cyclic reference.\n", block->name.str, nextVal->block->name.str);
-                    fkr_writeFuncDecl(&err->msg, func);
-                    fkr_writeToStr(&err->msg, "\n");
-                    if(block != func->firstBlock)
-                        fkr_writeToStr(&err->msg, "\t...\n");
-                    fkr_writeBlock(&err->msg, block, val);
-                    fkr_writeBlock(&err->msg, nextVal->block, nextVal);
-                }
-
-                if(nextVal->block->fn != block->fn) {
-                    err->error = true;
-                    fkr_writeToStr(&err->msg, "Value %%%d is in a different function!\n", nextVal->sym);
-
-                    fkr_writeFuncDecl(&err->msg, func);
-                    fkr_writeToStr(&err->msg, "\n");                    
-                    if(block != func->firstBlock)
-                        fkr_writeToStr(&err->msg, "\t...\n");
-                    fkr_writeBlock(&err->msg, block, val);
-
-                    fkr_writeToStr(&err->msg, "\n"); 
-                    fkr_writeFuncDecl(&err->msg, nextVal->block->fn);
-                    fkr_writeToStr(&err->msg, "\n");                    
-                    if(nextVal->block != nextVal->block->fn->firstBlock)
-                        fkr_writeToStr(&err->msg, "\t...\n");
-                    fkr_writeBlock(&err->msg, nextVal->block, nextVal);
-                }
-            }
+            verifyValRef(err, func, block, val, nextVal);
         }
+    }
+    if(val->type == FKR_VAL_CALL) {
+        fkr_valCall* call = (fkr_valCall*)val;
+        for(int i = 0; i < call->argc; i++)
+            verifyValRef(err, func, block, val, call->args[i]);
     }
 
     switch(val->type) {
@@ -141,17 +150,49 @@ static void verifyVal(fkr_error* err, fkr_func* func, fkr_block* block, fkr_val*
             }
             break;
         }
+        case FKR_VAL_ARG: {
+            fkr_valArg* arg = (fkr_valArg*)val;
+            fkr_typeFunc* fnType = (fkr_typeFunc*)func->v.valType;
+            if(arg->idx < 0 || arg->idx >= fnType->paramCnt) {
+                causedError = true;
+                fkr_writeToStr(&err->msg, "Argument index must be between 0 and %d!\n", fnType->paramCnt - 1);
+            }
+            break;
+        }
         case FKR_VAL_RETURN: {
             fkr_valReturn* ret = (fkr_valReturn*)val;
-            if(ret->retType != func->retType) {
+            fkr_typeFunc* fnType = (fkr_typeFunc*)func->v.valType;
+            if(ret->retType != fnType->retType) {
                 causedError = true;
                 fkr_writeToStr(&err->msg, "Invalid return type!\n");
                 fkr_writeToStr(&err->msg, "Function %s returns ", func->name.str);
-                fkr_writeType(&err->msg, func->retType);
+                fkr_writeType(&err->msg, fnType->retType);
                 fkr_writeToStr(&err->msg, ", received ");
                 fkr_writeType(&err->msg, ret->retType);
                 fkr_writeToStr(&err->msg, ".\n");
             }
+            break;
+        }
+        case FKR_VAL_CALL: {
+            fkr_valCall* call = (fkr_valCall*)val;
+            if(fkr_getTypeType(call->func->valType) == FKR_TYPE_FUNC) {
+                fkr_typeFunc* fnType = (fkr_typeFunc*)call->func->valType;
+                if(call->argc != fnType->paramCnt) {
+                    causedError = true;
+                    fkr_writeToStr(&err->msg, "Function expected %d arguments, received %d!\n", fnType->paramCnt, call->argc);
+                }
+                for(int i = 0; i < (call->argc > fnType->paramCnt ? fnType->paramCnt : call->argc); i++) {
+                    if(call->args[i]->valType != fnType->params[i]) {
+                        causedError = true;
+                        fkr_writeToStr(&err->msg, "Function argument #%d has type ", i + 1);
+                        fkr_writeType(&err->msg, fnType->params[i]);
+                        fkr_writeToStr(&err->msg, ", not ");
+                        fkr_writeType(&err->msg, call->args[i]->valType);
+                        fkr_writeToStr(&err->msg, "\n");
+                    }
+                }
+            }
+            break;
         }
     }
     

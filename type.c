@@ -87,3 +87,10 @@ bool fkr_isPtrType(fkr_typeRef type) {
     fkr_typeType t = fkr_getTypeType(type);
     return t == FKR_TYPE_PTR;
 }
+
+void fkr_freeType(fkr_type* t) {
+    if(t->type == FKR_TYPE_FUNC) {
+        fkr_typeFunc* func = (fkr_typeFunc*)t;
+        free(func->params);
+    }
+}

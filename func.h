@@ -8,13 +8,11 @@
 #include <stdbool.h>
 
 typedef struct fkr_func {
+    fkr_val v;
+
     fkr_str name;
     fkr_block* blocks;
     fkr_block* firstBlock;
-
-    fkr_type* retType;
-    int paramCnt;
-    fkr_type** paramTypes; 
 
     struct fkr_context* ctx;
 

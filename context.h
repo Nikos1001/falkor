@@ -22,5 +22,6 @@ void fkr_freeContext(fkr_contextRef ctx);
 fkr_pkgRef fkr_addPackage(fkr_context* ctx, const char* name);
 
 fkr_typeRef fkr_ptrType(fkr_contextRef ctx, fkr_typeRef elemType);
+fkr_typeRef fkr_funcType(fkr_contextRef ctx, fkr_typeRef retType, int paramCnt, fkr_typeRef* params);
 
 #endif

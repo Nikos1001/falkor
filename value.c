@@ -7,7 +7,10 @@ void fkr_initVal(fkr_val* val) {
 }
 
 void fkr_freeVal(fkr_val* val) {
-
+    if(val->type == FKR_VAL_CALL) {
+        fkr_valCall* call = (fkr_valCall*)val;
+        free(call->args);
+    }
 }
 
 size_t fkr_valPtrOffsets[][FKR_MAX_VAL_PTRS] = {
@@ -18,5 +21,7 @@ size_t fkr_valPtrOffsets[][FKR_MAX_VAL_PTRS] = {
     [FKR_VAL_SET]    = {offsetof(fkr_valSet, ptr),       offsetof(fkr_valSet, val), 0},
     [FKR_VAL_JUMP]   = {0,                               0,                         0},
     [FKR_VAL_BRANCH] = {offsetof(fkr_valBranch, cond),   0,                         0},
-    [FKR_VAL_RETURN] = {offsetof(fkr_valReturn, retVal), 0,                         0}
+    [FKR_VAL_FUNC]   = {0,                               0,                         0},
+    [FKR_VAL_RETURN] = {offsetof(fkr_valReturn, retVal), 0,                         0},
+    [FKR_VAL_CALL]   = {offsetof(fkr_valCall, func),     0,                         0}
 };

@@ -15,7 +15,10 @@ typedef enum {
     FKR_VAL_SET,
     FKR_VAL_JUMP,
     FKR_VAL_BRANCH,
-    FKR_VAL_RETURN
+    FKR_VAL_FUNC,
+    FKR_VAL_ARG,
+    FKR_VAL_RETURN,
+    FKR_VAL_CALL
 } fkr_valType;
 
 struct fkr_block;
@@ -89,9 +92,21 @@ typedef struct {
 
 typedef struct {
     fkr_val v;
+    int idx;
+} fkr_valArg;
+
+typedef struct {
+    fkr_val v;
     fkr_val* retVal;
     fkr_type* retType;
 } fkr_valReturn;
+
+typedef struct {
+    fkr_val v;
+    fkr_val* func;
+    fkr_val** args;
+    int argc;
+} fkr_valCall;
 
 typedef fkr_val* fkr_valRef;
 
