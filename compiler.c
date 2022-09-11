@@ -29,6 +29,8 @@ static void compileType(fkr_str* src, fkr_type* t) {
         fkr_typePtr* ptr = (fkr_typePtr*)t;
         compileType(src, ptr->elemType);
         fkr_writeToStr(src, "*");
+    } else if(type == FKR_TYPE_FUNC) {
+        fkr_writeToStr(src, "void*"); // curse you, C function pointer syntax 
     }
 }
 
@@ -145,7 +147,21 @@ static void compileVal(fkr_str* src, fkr_val* val) {
         }
         case FKR_VAL_CALL: {
             fkr_valCall* call = (fkr_valCall*)val;
+
+            fkr_typeFunc* fnType = (fkr_typeFunc*)call->func->valType;
+            fkr_writeToStr(src, "((");
+            compileType(src, fnType->retType);
+            fkr_writeToStr(src, " (*)(");
+            for(int i = 0; i < fnType->paramCnt; i++) {
+                compileType(src, fnType->params[i]);
+                if(i != fnType->paramCnt - 1)
+                    fkr_writeToStr(src, ", ");
+            }
+            fkr_writeToStr(src, "))"); 
+
             compileValUse(src, call->func);
+            fkr_writeToStr(src, ")");
+
             fkr_writeToStr(src, "(");
             for(int i = 0; i < call->argc; i++) {
                 compileValUse(src, call->args[i]);
