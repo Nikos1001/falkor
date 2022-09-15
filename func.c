@@ -70,21 +70,14 @@ static void topologicalSortDFS(fkr_block* blk, bool* vis, fkr_block** stack, int
     vis[blk->sym] = true;
 
     for(fkr_val* val = blk->values; val != NULL; val = val->next) {
-        for(int i = 0; i < FKR_MAX_VAL_PTRS; i++) {
-            size_t offset = fkr_valPtrOffsets[val->type][i];
-            if(offset) {
-                fkr_val* nextVal = *(fkr_val**)((char*)val + offset);
-                if(nextVal != NULL && nextVal->type != FKR_VAL_FUNC) {
-                    topologicalSortDFS(nextVal->block, vis, stack, stackIdx);
-                }
-            }
-        }
-        if(val->type == FKR_VAL_CALL) {
-            fkr_valCall* call = (fkr_valCall*)val;
-            for(int i = 0; i < call->argc; i++)
-                if(call->args[i] != NULL && call->args[i]->type != FKR_VAL_FUNC)
-                    topologicalSortDFS(call->args[i]->block, vis, stack, stackIdx);
-        }
+        
+        int nRefs = fkr_getNumValRefs(val);
+        fkr_val* refs[nRefs];
+        fkr_getValRefs(val, refs); 
+        for(int i = 0; i < nRefs; i++)
+            if(refs[i] != NULL && refs[i]->type != FKR_VAL_FUNC)
+                topologicalSortDFS(refs[i]->block, vis, stack, stackIdx);
+
     }
 
     stack[*stackIdx] = blk;

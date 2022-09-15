@@ -261,3 +261,16 @@ fkr_valRef fkr_call(fkr_builder* b, fkr_valRef func, int argc, fkr_valRef* args)
 
     return (fkr_val*)call;
 }
+
+fkr_valRef fkr_struct(fkr_builder* b, int memCnt, fkr_valRef* members) {
+    fkr_valStruct* strukt = (fkr_valStruct*)appendVal(b, sizeof(fkr_valStruct), FKR_VAL_STRUCT);
+    strukt->memCnt = memCnt;
+    strukt->members = malloc(memCnt * sizeof(fkr_val*));
+    fkr_typeRef memTypes[memCnt];
+    for(int i = 0; i < memCnt; i++) {
+        strukt->members[i] = members[i];
+        memTypes[i] = members[i]->valType;
+    }
+    strukt->v.valType = fkr_structType(b->ctx, memCnt, memTypes);
+    return (fkr_val*)strukt;
+}

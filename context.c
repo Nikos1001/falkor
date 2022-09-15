@@ -93,3 +93,33 @@ fkr_typeRef fkr_funcType(fkr_contextRef ctx, fkr_typeRef retType, int paramCnt, 
         res->params[i] = params[i];
     return (fkr_type*)res;
 }
+
+fkr_typeRef fkr_structType(fkr_contextRef ctx, int memCnt, fkr_typeRef* members) {
+    for(fkr_type* t = ctx->types; t != NULL; t = t->nextType) {
+        if(fkr_getTypeType(t) == FKR_TYPE_STRUCT) {
+            fkr_typeStruct* strukt = (fkr_typeStruct*)t;
+            if(strukt->memCnt != memCnt)
+                continue;
+
+            bool match = true;
+            for(int i = 0; i < memCnt; i++) {
+                if(strukt->members[i] != members[i]) {
+                    match = false;
+                    break;
+                }
+            }
+            if(!match)
+                continue;
+            
+            return t;
+        }
+    }
+
+    fkr_typeStruct* strukt = (fkr_typeStruct*)allocType(ctx, FKR_TYPE_STRUCT, sizeof(fkr_typeStruct));
+    strukt->memCnt = memCnt;
+    strukt->members = malloc(memCnt * sizeof(fkr_type*));
+    for(int i = 0; i < memCnt; i++)
+        strukt->members[i] = members[i];
+
+    return (fkr_type*)strukt; 
+}

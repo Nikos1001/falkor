@@ -42,18 +42,12 @@ static void verifyVal(fkr_error* err, fkr_func* func, fkr_block* block, fkr_val*
 
     bool causedError = false;
 
-    for(int i = 0; i < FKR_MAX_VAL_PTRS; i++) {
-        size_t offset = fkr_valPtrOffsets[val->type][i];
-        if(offset) {
-            fkr_val* nextVal = *(fkr_val**)((char*)val + offset);
-            verifyValRef(err, func, block, val, nextVal);
-        }
-    }
-    if(val->type == FKR_VAL_CALL) {
-        fkr_valCall* call = (fkr_valCall*)val;
-        for(int i = 0; i < call->argc; i++)
-            verifyValRef(err, func, block, val, call->args[i]);
-    }
+    int nRefs = fkr_getNumValRefs(val);
+    fkr_val* refs[nRefs];
+    fkr_getValRefs(val, refs);
+    for(int i = 0; i < nRefs; i++)
+        if(refs[i] != NULL && refs[i]->type != FKR_VAL_FUNC)
+            verifyValRef(err, func, block, val, refs[i]);
 
     switch(val->type) {
         case FKR_VAL_CONST:
@@ -159,6 +153,9 @@ static void verifyVal(fkr_error* err, fkr_func* func, fkr_block* block, fkr_val*
             }
             break;
         }
+        case FKR_VAL_FUNC: {
+            break;
+        }
         case FKR_VAL_RETURN: {
             fkr_valReturn* ret = (fkr_valReturn*)val;
             fkr_typeFunc* fnType = (fkr_typeFunc*)func->v.valType;
@@ -192,6 +189,9 @@ static void verifyVal(fkr_error* err, fkr_func* func, fkr_block* block, fkr_val*
                     }
                 }
             }
+            break;
+        }
+        case FKR_VAL_STRUCT: {
             break;
         }
     }

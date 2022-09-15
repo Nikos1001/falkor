@@ -80,6 +80,15 @@ void fkr_writeType(fkr_str* s, fkr_type* type) {
         }
         fkr_writeToStr(s, ") => ");
         fkr_writeType(s, func->retType);
+    } else if(t == FKR_TYPE_STRUCT) {
+        fkr_typeStruct* strukt = (fkr_typeStruct*)type;
+        fkr_writeToStr(s, "{");
+        for(int i = 0; i < strukt->memCnt; i++) {
+            fkr_writeType(s, strukt->members[i]);
+            if(i != strukt->memCnt - 1)
+                fkr_writeToStr(s, ", ");
+        }
+        fkr_writeToStr(s, "}");
     }
 
 }

@@ -18,7 +18,8 @@ typedef enum {
     FKR_VAL_FUNC,
     FKR_VAL_ARG,
     FKR_VAL_RETURN,
-    FKR_VAL_CALL
+    FKR_VAL_CALL,
+    FKR_VAL_STRUCT
 } fkr_valType;
 
 struct fkr_block;
@@ -108,10 +109,19 @@ typedef struct {
     int argc;
 } fkr_valCall;
 
+typedef struct {
+    fkr_val v;
+    int memCnt;
+    fkr_val** members;
+} fkr_valStruct;
+
 typedef fkr_val* fkr_valRef;
 
 void fkr_initVal(fkr_val* val);
 void fkr_freeVal(fkr_val* val);
+
+int fkr_getNumValRefs(fkr_val* v);
+void fkr_getValRefs(fkr_val* v, fkr_val** dst);
 
 #define FKR_MAX_VAL_PTRS 3
 extern size_t fkr_valPtrOffsets[][FKR_MAX_VAL_PTRS]; 

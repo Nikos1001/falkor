@@ -45,4 +45,6 @@ fkr_valRef fkr_arg(fkr_builder* b, int idx);
 void fkr_return(fkr_builder* b, fkr_valRef val);
 fkr_valRef fkr_call(fkr_builder* b, fkr_valRef func, int argc, fkr_valRef* args);
 
+fkr_valRef fkr_struct(fkr_builder* b, int memCnt, fkr_valRef* members);
+
 #endif

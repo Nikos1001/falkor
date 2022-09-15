@@ -31,6 +31,14 @@ static void compileType(fkr_str* src, fkr_type* t) {
         fkr_writeToStr(src, "*");
     } else if(type == FKR_TYPE_FUNC) {
         fkr_writeToStr(src, "void*"); // curse you, C function pointer syntax 
+    } else if(type == FKR_TYPE_STRUCT) {
+        fkr_typeStruct* strukt = (fkr_typeStruct*)t;
+        fkr_writeToStr(src, "struct {");
+        for(int i = 0; i < strukt->memCnt; i++) {
+            compileType(src, strukt->members[i]);
+            fkr_writeToStr(src, " m%d;", i);
+        } 
+        fkr_writeToStr(src, "}");
     }
 }
 
@@ -97,7 +105,7 @@ static void compileVal(fkr_str* src, fkr_val* val) {
             break;
         }
         case FKR_VAL_ALLOC: {
-            fkr_writeToStr(src, "alloc_%s", valName);
+            fkr_writeToStr(src, "(void*)alloc_%s", valName);
             break;
         }
         case FKR_VAL_GET: {
@@ -108,10 +116,21 @@ static void compileVal(fkr_str* src, fkr_val* val) {
         }
         case FKR_VAL_SET: {
             fkr_valSet* set = (fkr_valSet*)val;
-            fkr_writeToStr(src, "*");
-            compileValUse(src, set->ptr);
-            fkr_writeToStr(src, " = ");
-            compileValUse(src, set->val);
+            
+            if(fkr_getTypeType(set->val->valType) == FKR_TYPE_STRUCT) {
+                fkr_typeStruct* strukt = (fkr_typeStruct*)set->val->valType;
+                for(int i = 0; i < strukt->memCnt; i++) {
+                    compileValUse(src, set->ptr);
+                    fkr_writeToStr(src, "->m%d = ", i);
+                    compileValUse(src, set->val);
+                    fkr_writeToStr(src, ".m%d;\n", i);
+                }
+            } else {
+                fkr_writeToStr(src, "*");
+                compileValUse(src, set->ptr);
+                fkr_writeToStr(src, " = ");
+                compileValUse(src, set->val);
+            }
             break;
         }
         case FKR_VAL_JUMP: {
@@ -171,11 +190,24 @@ static void compileVal(fkr_str* src, fkr_val* val) {
             fkr_writeToStr(src, ")");
             break;
         }
+        case FKR_VAL_STRUCT: {
+            fkr_writeToStr(src, "{0}");
+            break;
+        }
     }
 
     fkr_writeToStr(src, ";\n");
-}
 
+    if(val->type == FKR_VAL_STRUCT) {
+        fkr_valStruct* strukt = (fkr_valStruct*)val;
+        for(int i = 0; i < strukt->memCnt; i++) {
+            fkr_writeToStr(src, "%s.m%d = ", valName, i);
+            compileValUse(src, strukt->members[i]);
+            fkr_writeToStr(src, ";\n");
+        }
+    }
+}
+;
 static void compileFunc(fkr_str* src, fkr_func* fn) {
 
     fkr_generateFuncSymbols(fn);

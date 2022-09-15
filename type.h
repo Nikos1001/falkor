@@ -18,7 +18,8 @@ typedef enum {
     FKR_TYPE_F32,
     FKR_TYPE_F64,
     FKR_TYPE_PTR,
-    FKR_TYPE_FUNC
+    FKR_TYPE_FUNC,
+    FKR_TYPE_STRUCT
 } fkr_typeType;
 
 typedef struct {
@@ -46,6 +47,12 @@ typedef struct {
     int paramCnt;
     fkr_type** params;
 } fkr_typeFunc;
+
+typedef struct {
+    fkr_type t;
+    int memCnt;
+    fkr_type** members;
+} fkr_typeStruct;
 
 fkr_typeRef fkr_voidType();
 fkr_typeRef fkr_i8Type();
